@@ -29,7 +29,13 @@ chmod +x scripts/*.sh
 Then connect:
 
 - **Phone:** `./scripts/show-qr.sh phone` and scan with the [WireGuard](https://www.wireguard.com/install/) app
-- **Laptop:** import `config/peer_laptop/peer_laptop.conf` (path may vary slightly; `./scripts/status.sh` lists them)
+- **Laptop:** import the laptop conf (see `./scripts/status.sh` for paths), or copy it off the VPS:
+
+```bash
+scp user@YOUR_VPS:~/PrivateVPN/config/peer_laptop/peer_laptop.conf .
+```
+
+Confirm the tunnel with `./scripts/verify.sh`, then on the client: `curl -4 https://ifconfig.me` (should show the VPS IP).
 
 ## Configuration
 
@@ -53,10 +59,13 @@ docker compose up -d --force-recreate
 
 ```bash
 ./scripts/status.sh              # container + handshake status
+./scripts/verify.sh              # expected egress IP + wg show
 ./scripts/show-qr.sh phone       # QR for phone
 ./scripts/show-qr.sh laptop      # QR for laptop
 ./scripts/add-device.sh tablet   # add another named device
 ./scripts/open-firewall.sh       # open UDP port (ufw/firewalld)
+./scripts/logs.sh                # follow container logs
+./scripts/restart.sh             # restart WireGuard
 ./scripts/stop.sh                # stop the VPN
 ```
 
