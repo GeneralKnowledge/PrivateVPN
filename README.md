@@ -4,7 +4,8 @@ A single-user WireGuard VPN you can host on any VPS. One command brings up the s
 
 ## Requirements
 
-- A VPS with a public IP (Ubuntu 22.04/24.04 works well)
+- A VPS with a public IP and a normal Linux network stack (KVM/Xen). OpenVZ/LXC hosts often lack WireGuard kernel support.
+- Ubuntu 22.04/24.04 (or Debian) recommended
 - Docker with Compose plugin
 - UDP port `51820` open in the VPS firewall / cloud security group
 
@@ -14,6 +15,7 @@ A single-user WireGuard VPN you can host on any VPS. One command brings up the s
 git clone <your-repo-url> PrivateVPN
 cd PrivateVPN
 chmod +x scripts/*.sh
+./scripts/install-docker.sh  # skip if Docker is already installed
 ./scripts/setup.sh
 ./scripts/open-firewall.sh   # ufw / firewalld if present
 ```
