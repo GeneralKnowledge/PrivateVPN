@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
 cd "$ROOT_DIR"
 
-if ! docker compose ps --status running --services 2>/dev/null | grep -qx wireguard; then
-  echo "WireGuard is not running. Start it with: ./scripts/setup.sh"
+if ! container_running; then
+  err "WireGuard is not running. Start it with: ./scripts/setup.sh"
   exit 1
 fi
 
@@ -16,4 +18,9 @@ echo "=== Handshake / peers ==="
 docker compose exec -T wireguard wg show || true
 echo
 echo "=== Client configs ==="
-find config -type f \( -name 'peer*.conf' -o -name '*.png' \) 2>/dev/null | sort || echo "(none yet)"
+confs="$(list_peer_confs || true)"
+if [[ -n "${confs}" ]]; then
+  echo "${confs}"
+else
+  echo "(none yet)"
+fi

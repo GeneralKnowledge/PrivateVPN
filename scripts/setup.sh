@@ -1,24 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
 cd "$ROOT_DIR"
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-info() { echo -e "${GREEN}==>${NC} $*"; }
-warn() { echo -e "${YELLOW}==>${NC} $*"; }
-err()  { echo -e "${RED}==>${NC} $*" >&2; }
-
-require_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    err "Missing required command: $1"
-    exit 1
-  fi
-}
 
 detect_public_ip() {
   local ip=""
@@ -58,23 +44,25 @@ else
   info "Using existing .env"
 fi
 
-# shellcheck disable=SC1091
-source .env
+SERVERURL="$(env_get SERVERURL || true)"
+SERVERPORT="$(env_get SERVERPORT || true)"
+SERVERPORT="${SERVERPORT:-51820}"
 
-if [[ -z "${SERVERURL:-}" || "${SERVERURL}" == "your.vps.ip.or.domain" ]]; then
+if [[ -z "${SERVERURL}" || "${SERVERURL}" == "your.vps.ip.or.domain" ]]; then
   err "Set SERVERURL in .env to your VPS public IP or hostname."
   exit 1
 fi
 
 mkdir -p config
+chmod 700 config
 
 info "Starting WireGuard (PrivateVPN)"
 docker compose up -d
 
 info "Waiting for peer config..."
 peer_conf=""
-for _ in $(seq 1 30); do
-  peer_conf="$(find config -type f -name 'peer*.conf' 2>/dev/null | sort | head -n 1 || true)"
+for _ in $(seq 1 45); do
+  peer_conf="$(list_peer_confs | head -n 1 || true)"
   if [[ -n "${peer_conf}" ]]; then
     break
   fi
@@ -82,23 +70,25 @@ for _ in $(seq 1 30); do
 done
 
 echo
-info "PrivateVPN is running on ${SERVERURL}:${SERVERPORT:-51820}/udp"
+info "PrivateVPN is running on ${SERVERURL}:${SERVERPORT}/udp"
 echo
 
 if [[ -n "${peer_conf}" ]]; then
-  info "Client config: ${peer_conf}"
+  info "Client configs:"
+  list_peer_confs | while read -r conf; do
+    echo "  - ${conf}"
+  done
+  echo
+  info "First peer config (${peer_conf}):"
   echo
   cat "${peer_conf}"
   echo
-  qr_png="$(dirname "${peer_conf}")/peer1.png"
-  if [[ -f "${qr_png}" ]]; then
-    info "QR code image: ${qr_png}"
-  fi
-  info "Show QR in terminal: ./scripts/show-qr.sh"
-  info "Status: ./scripts/status.sh"
+  info "Show QR: ./scripts/show-qr.sh phone"
+  info "Status:  ./scripts/status.sh"
+  info "Firewall: ./scripts/open-firewall.sh"
 else
-  warn "Peer config not ready yet. Run: ./scripts/status.sh"
+  warn "Peer config not ready yet. Check logs: docker compose logs -f wireguard"
 fi
 
 echo
-warn "Open UDP port ${SERVERPORT:-51820} on your VPS firewall / cloud security group."
+warn "Open UDP port ${SERVERPORT} on your VPS firewall / cloud security group."

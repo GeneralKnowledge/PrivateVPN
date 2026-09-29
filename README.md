@@ -1,6 +1,6 @@
 # PrivateVPN
 
-A single-user WireGuard VPN you can host on any VPS. One command brings up the server and prints a client config (plus a QR code for phones).
+A single-user WireGuard VPN you can host on any VPS. One command brings up the server and prints client configs (plus QR codes for phones).
 
 ## Requirements
 
@@ -15,18 +15,19 @@ git clone <your-repo-url> PrivateVPN
 cd PrivateVPN
 chmod +x scripts/*.sh
 ./scripts/setup.sh
+./scripts/open-firewall.sh   # ufw / firewalld if present
 ```
 
 `setup.sh` will:
 
 1. Create `.env` (auto-fills your public IP when possible)
 2. Start WireGuard in Docker
-3. Print your client config
+3. Print your first client config
 
 Then connect:
 
-- **Phone:** `./scripts/show-qr.sh` and scan with the [WireGuard](https://www.wireguard.com/install/) app
-- **Desktop:** import `config/peer1/peer1.conf` into the WireGuard app
+- **Phone:** `./scripts/show-qr.sh phone` and scan with the [WireGuard](https://www.wireguard.com/install/) app
+- **Laptop:** import `config/peer_laptop/peer_laptop.conf` (path may vary slightly; `./scripts/status.sh` lists them)
 
 ## Configuration
 
@@ -36,9 +37,9 @@ Edit `.env` (from `.env.example`):
 |----------|---------|---------|
 | `SERVERURL` | VPS public IP or DNS name | *(required)* |
 | `SERVERPORT` | UDP listen port | `51820` |
-| `PEERS` | Number of client devices | `1` |
+| `PEERS` | Comma-separated device names | `phone,laptop` |
 | `PEERDNS` | DNS for clients | `1.1.1.1` |
-| `ALLOWEDIPS` | Routes through VPN (`0.0.0.0/0` = all traffic) | `0.0.0.0/0` |
+| `ALLOWEDIPS` | Routes through VPN | `0.0.0.0/0,::/0` (full tunnel) |
 
 After changing env vars that affect peer configs, recreate:
 
@@ -49,16 +50,17 @@ docker compose up -d --force-recreate
 ## Useful commands
 
 ```bash
-./scripts/status.sh       # container + handshake status
-./scripts/show-qr.sh      # QR for peer1 (phone)
-./scripts/show-qr.sh 2    # QR for peer2
-./scripts/add-device.sh   # add another device (peer2, peer3, ...)
-./scripts/stop.sh         # stop the VPN
+./scripts/status.sh              # container + handshake status
+./scripts/show-qr.sh phone       # QR for phone
+./scripts/show-qr.sh laptop      # QR for laptop
+./scripts/add-device.sh tablet   # add another named device
+./scripts/open-firewall.sh       # open UDP port (ufw/firewalld)
+./scripts/stop.sh                # stop the VPN
 ```
 
 ## Firewall
 
-Allow WireGuard UDP on the VPS:
+Prefer `./scripts/open-firewall.sh`. Manually:
 
 ```bash
 # ufw
@@ -80,8 +82,9 @@ Your public IP becomes the VPS IP while connected. Only devices with a generated
 
 ## Security notes
 
-- Keep `config/` private — it contains private keys (already gitignored)
+- Keep `config/` private — it contains private keys (gitignored; setup sets mode `700`)
 - Do not commit `.env` or any `*.conf` files
+- The Docker image is pinned to a specific tag (not `:latest`) for reproducible deploys
 - Rotate by deleting `config/` and running `./scripts/setup.sh` again (clients must re-import)
 - This is intentionally single-user / few-device; not a multi-tenant VPN product
 
@@ -94,7 +97,7 @@ To only send some traffic through the VPN, set in `.env`:
 ALLOWEDIPS=10.0.0.0/8,192.168.0.0/16
 ```
 
-Then recreate the container and re-import the client config.
+Then recreate the container and re-import the client configs.
 
 ## Uninstall
 
