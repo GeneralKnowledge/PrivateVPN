@@ -1,0 +1,7 @@
+.env
+config/
+*.conf
+!*.conf.example
+.DS_Store
+*.pem
+*.key
