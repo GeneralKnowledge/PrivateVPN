@@ -4,7 +4,8 @@ A single-user WireGuard VPN you can host on any VPS. One command brings up the s
 
 ## Requirements
 
-- A VPS with a public IP (Ubuntu 22.04/24.04 works well)
+- A VPS with a public IP and a normal Linux network stack (KVM/Xen). OpenVZ/LXC hosts often lack WireGuard kernel support.
+- Ubuntu 22.04/24.04 (or Debian) recommended
 - Docker with Compose plugin
 - UDP port `51820` open in the VPS firewall / cloud security group
 
@@ -14,6 +15,7 @@ A single-user WireGuard VPN you can host on any VPS. One command brings up the s
 git clone <your-repo-url> PrivateVPN
 cd PrivateVPN
 chmod +x scripts/*.sh
+./scripts/install-docker.sh  # skip if Docker is already installed
 ./scripts/setup.sh
 ./scripts/open-firewall.sh   # ufw / firewalld if present
 ```
@@ -27,7 +29,13 @@ chmod +x scripts/*.sh
 Then connect:
 
 - **Phone:** `./scripts/show-qr.sh phone` and scan with the [WireGuard](https://www.wireguard.com/install/) app
-- **Laptop:** import `config/peer_laptop/peer_laptop.conf` (path may vary slightly; `./scripts/status.sh` lists them)
+- **Laptop:** import the laptop conf (see `./scripts/status.sh` for paths), or copy it off the VPS:
+
+```bash
+scp user@YOUR_VPS:~/PrivateVPN/config/peer_laptop/peer_laptop.conf .
+```
+
+Confirm the tunnel with `./scripts/verify.sh`, then on the client: `curl -4 https://ifconfig.me` (should show the VPS IP).
 
 ## Configuration
 
@@ -51,10 +59,13 @@ docker compose up -d --force-recreate
 
 ```bash
 ./scripts/status.sh              # container + handshake status
+./scripts/verify.sh              # expected egress IP + wg show
 ./scripts/show-qr.sh phone       # QR for phone
 ./scripts/show-qr.sh laptop      # QR for laptop
 ./scripts/add-device.sh tablet   # add another named device
 ./scripts/open-firewall.sh       # open UDP port (ufw/firewalld)
+./scripts/logs.sh                # follow container logs
+./scripts/restart.sh             # restart WireGuard
 ./scripts/stop.sh                # stop the VPN
 ```
 
